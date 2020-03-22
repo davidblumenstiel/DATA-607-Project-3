@@ -529,6 +529,10 @@ p <- p + geom_polygon(data=Total, aes(x=long, y=lat, group = group, fill=Total$t
 
 p
 ```
+```{r}
+
+```
+
 ### The Question on Everybody's Mind: What Technical Skills will Get Me a High Paying Job?
 #### First, we need to select and arrange the data we want to use
 
