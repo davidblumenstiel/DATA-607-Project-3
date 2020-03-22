@@ -14,10 +14,24 @@ output:
       number_sections: true    
   pdf_document: default
 ---
-### Overview:
-#### The objective of this project was to answer the question: "Which are the most valued data science skills?".  The dataset used to answer this question was sourced from Kaggle: https://www.kaggle.com/elroyggj/indeed-dataset-data-scientistanalystengineer.  It contains information from 5715 data-science related job postings on the job-listings site, Indeed.  It includes information like the job titles, descriptions, technical skills required, state, salary, and more.  The dataset was cleaned and prepaired, then analyzed for the top skills required for each job-type, the locations of jobs, and for the skills that different pay-grades tend to require.
+## Overview
 
-```{r setup, include=FALSE}
+#### What are the Most Valued Data Science Skills?  
+
+The dataset used to answer this question was sourced from Kaggle:  
+https://www.kaggle.com/elroyggj/indeed-dataset-data-scientistanalystengineer.  
+
+It contains information from 5,715 data-science related job postings on the job-listings site, Indeed. It includes information like the job title, description, technical skills required, state, salary, and more.  The dataset was imported, tidied, then analyzed. 
+
+We looked at the top skills required for each job-type, the locations of jobs, and the skills that different pay-grades tend to require.
+
+
+## Preparing the Data
+
+### Loading Packages
+
+```{r setup, messages = F}
+# Loading packages
 knitr::opts_chunk$set(echo = TRUE)
 library(stringr)
 library(knitr)
@@ -28,12 +42,15 @@ library(ggplot2)
 library(scales)
 library(stats)
 library(grid)
-#install.packages("wordcloud")
 library("wordcloud")
-#install.packages("RColorBrewer")
 library("RColorBrewer")
 library(maps)
+library(kableExtra)
+```
 
+### Mapping States
+
+```{r}
 stateFromLower <-function(x) {
    #read 52 state codes into local variable [includes DC (Washington D.C. and PR (Puerto Rico)]
   st.codes<-data.frame(
@@ -64,18 +81,23 @@ stateFromLower <-function(x) {
 
 ```
 
-### Import
+### Import the Dataset
 
 ```{r}
 #Loads the dataset
 df_raw <- read.csv("https://raw.githubusercontent.com/davidblumenstiel/DATA-607-Project-3/master/indeed_job_dataset.csv",stringsAsFactors = FALSE)
 
-#Create working df object
+#Create working df object copy
 df <- df_raw
 ```
-### Soft Skills
 
-#### Skills that are not technical were not included in the dataset.  However, they are mentioned in the job descriptions.  So, we begin by programatically reading through the job-descriptions to extract mentions of the 'soft-skills'
+### Soft Skills 
+
+Soft skills were not explicitly included in the dataset as a field. Luckily, they are mentioned in the job descriptions.  
+
+We begin by programatically reading through the job-descriptions to extract mentions of the 'soft-skills'.
+
+One of the tasks before this was to create a list of soft skills that we'd be looking for.
 
 ```{r}
 #The soft skills we will look will be stored as: 'keywords'
@@ -171,6 +193,9 @@ ggplot(skillby_type_sal) +
 
 
 ```
+
+### Outliers
+
 #### Looking at the extreme case of high salary data engineer
 
 ```{r engineer_highsalary}
@@ -189,6 +214,7 @@ eng_highs_count <- eng_highs_count[order(-eng_highs_count$x),]
 rownames(eng_highs_count) <- NULL
 
 ```
+
 #### Looking at the extreme case of low salary data analyst
 
 ```{r analyst_lowsalary}
@@ -208,9 +234,11 @@ anl_lows_count <- anl_lows_count[order(-anl_lows_count$x),]
 rownames(anl_lows_count) <- NULL
 
 ```
+
 #### Looking at the extreme cases of high salary data engineer and low salary data analyst together
+
 ```{r topskills-table}
-library(kableExtra)
+
 table_eng_highs <- eng_highs_count[1:22,]
 table_anl_lows <- anl_lows_count[1:22,]
 
@@ -228,7 +256,8 @@ print(table_eng_highs)
 ```
 
 ### Hard Skills
-#### Here the hard skills are seperated out from the inbuilt list of skills in the raw dataset
+
+Here the hard skills are extracted out from the inbuilt list of skills in the raw dataset.
 
 ```{r}
 # List all hard skills and how often they were listed in a separate dataframe
@@ -259,7 +288,10 @@ skills <- bind_rows(df2, sdf)
 
 
 ### Job Title
-#### Here we look at the different types of jobs and industries and compare the skills mentioned
+
+Here we look at the different types of jobs and industries and compare the skills mentioned.
+
+We're looking to identify roles that specifiy if roles are analyst, engineer, or scientists, as well as roles that are junior or senior level.
 
 ```{r, warning = FALSE}
 df <- df_raw
@@ -290,7 +322,10 @@ for (i in 1: nrow(job.indeed.df)) {
 }
 ```
 
-#### Combine Data
+### Combining The Data
+
+This is the raw dataset with the job title flags joined.
+
 ```{r}
 # Add job title flags to original dataframe
 # Merging with main Analysis Data Frame:
@@ -299,29 +334,9 @@ names(df_all)[1] <- 'job_id'
 ```
 
 
-#### Summary Visualizations
+#### Preparing Data for Hard Skill Visualizations
+
 ```{r}
-# Job Role Distribution by Position
-post_count <- nrow(df_raw)
-
-dplyr::summarize(final.data.df, 
-                    Analyst = sum(analyst) / n(),
-                    Engineer = sum(engineer) / n(),
-                    Scientist = sum(scientist) / n()) %>%
-  gather(position, pct_of_posts) %>%
-  ggplot(aes(x = position, y = pct_of_posts)) +
-  geom_col(fill = 'grey80') +
-  geom_hline(yintercept = .333, linetype = 'dotted') +
-  scale_y_continuous(label = percent_format(accuracy = 1)) +
-  labs(x = element_blank(), 
-       y = element_blank(), 
-       title = 'Job Title Distribution', 
-       subtitle = str_c('Data Roles from ', comma(post_count), ' Posts')) +
-  theme(legend.position = 'none') +
-  theme_bw()
-
-
-# hard skills dataframe for visualizations
 hs <- filter(skills, skill_type == 'hard') %>%
   left_join(final.data.df, by = c('id' = 'Id')) %>%
   mutate(analyst = ifelse(analyst == 1, id, NA),
@@ -345,9 +360,44 @@ hs <- filter(skills, skill_type == 'hard') %>%
 
 # specify top number of skills
 top_x <- 10
+```
+
+## Analysis
 
 
-# Top Hard Skills for All Data Postings
+### Job Role Distribution by Position
+
+Lets take a look at the relative demand for data analysts, engineers, and scientists.
+
+```{r}
+#row count of dataset
+post_count <- nrow(df_raw)
+
+dplyr::summarize(final.data.df, 
+                    Analyst = sum(analyst) / n(),
+                    Engineer = sum(engineer) / n(),
+                    Scientist = sum(scientist) / n()) %>%
+  gather(position, pct_of_posts) %>%
+  ggplot(aes(x = position, y = pct_of_posts)) +
+  geom_col(fill = 'grey80') +
+  geom_hline(yintercept = .333, linetype = 'dotted') +
+  scale_y_continuous(label = percent_format(accuracy = 1)) +
+  labs(x = element_blank(), 
+       y = element_blank(), 
+       title = 'Job Title Distribution', 
+       subtitle = str_c('Data Roles from ', comma(post_count), ' Posts')) +
+  theme(legend.position = 'none') +
+  theme_bw()
+```
+
+
+### Top Hard Skills 
+
+#### All Data Posts
+
+What are the most in demand skills for data role in general?
+
+```{r}
 ggplot( arrange(hs, desc(total_count))[1:top_x,], aes(x = reorder(skill, total_count), y = total_count/nrow(df_all))) +
   geom_col(fill = 'grey60') +
   coord_flip() +
@@ -356,9 +406,14 @@ ggplot( arrange(hs, desc(total_count))[1:top_x,], aes(x = reorder(skill, total_c
        y = "% of Job Posts",
        x = element_blank()) +
   scale_y_continuous(label = percent_format(accuracy = 1))
+```
 
+* Python and SQL are in high demand.
+* Machine Learning and R are also highly desired.
 
-# Top Hard Skills for Data Scientists
+#### Data Scientists
+
+```{r}
 ggplot( arrange(hs, desc(sci_ids))[1:top_x,], aes(x = reorder(skill, sci_pct), y = sci_pct)) +
   geom_col(fill = 'grey60') +
   coord_flip() +
@@ -367,9 +422,13 @@ ggplot( arrange(hs, desc(sci_ids))[1:top_x,], aes(x = reorder(skill, sci_pct), y
        y = "% of Job Posts",
        x = element_blank()) +
   scale_y_continuous(label = percent_format(accuracy = 1))
+```
 
+* Almost three out of four job posts mention Python.
+* About a third of posts mention machine learning.
 
-# Top Hard Skills for Data Analysts
+#### Data Analysts
+```{r}
 ggplot( arrange(hs, desc(ana_ids))[1:top_x,], aes(x = reorder(skill, ana_pct), y = ana_pct)) +
   geom_col(fill = 'grey60') +
   coord_flip() +
@@ -378,9 +437,13 @@ ggplot( arrange(hs, desc(ana_ids))[1:top_x,], aes(x = reorder(skill, ana_pct), y
        y = "% of Job Posts",
        x = element_blank()) +
   scale_y_continuous(label = percent_format(accuracy = 1))
+```
+
+* SQL is strongly associated to data analysts.
 
 
-# Top Hard Skills for Data Engineers
+#### Data Engineers
+```{r}
 ggplot( arrange(hs, desc(eng_ids))[1:top_x,], aes(x = reorder(skill, eng_pct), y = eng_pct)) +
   geom_col(fill = 'grey60') +
   coord_flip() +
@@ -389,9 +452,19 @@ ggplot( arrange(hs, desc(eng_ids))[1:top_x,], aes(x = reorder(skill, eng_pct), y
        y = "% of Job Posts",
        x = element_blank()) +
   scale_y_continuous(label = percent_format(accuracy = 1))
-  
+```
 
-# Distribution of Junior and Senior Data Scientist Roles
+* In general, data engineers seem to need to be highly skilled, with a combination of 5 skills that are mentioned in over half of all posts in this sample.
+* R ends up at #16 for data engineers.
+
+### Levels
+
+#### Distribution of Junior and Senior Data Scientist Roles
+
+What differences do we observe between junior and senior roles?
+
+```{r}
+# new dataframe for only junior and seniors
 jrs <- filter(final.data.df, junior == 1) %>%
   select(Id, Analyst = analyst, Engineer = engineer, Scientist = scientist) %>%
   gather(position, count, -Id)
@@ -414,9 +487,14 @@ ggplot(pos_and_role, aes(x = position, y = count, fill = level)) +
   labs(x = element_blank(), 
        y = element_blank(),
        title = 'Distribution of Specified Levels')
+```
+
+* There's not many junior roles compared to senior roles.
+* This suggests all of these data roles require experience.
 
 
-# Top Hard Skills for Junior Data Scientists
+#### Top Hard Skills for Junior Data Scientists
+```{r}
 hs_jr_base <- filter(skills, skill_type == 'hard') %>%
   inner_join(filter(final.data.df, junior == 1 & scientist == 1), by = c('id' = 'Id')) 
 hs_jr <-  group_by(hs_jr_base, skill) %>%
@@ -437,9 +515,13 @@ hs_sr_base <- filter(skills, skill_type == 'hard') %>%
 hs_sr <- group_by(hs_sr_base, skill) %>%
   dplyr::summarize(total_count = n())
 hs_sr_denom <- n_distinct(hs_sr_base$id)
+```
 
+* High demand for Python, machine learning, and R.
+* Tableau at $4 suggests the need for junior roles to create dashboards to convey the analysis.
 
-# Top Hard Skills for Senior Data Scientists
+#### Top Hard Skills for Senior Data Scientists
+```{r}
 ggplot( arrange(hs_sr, desc(total_count))[1:top_x,], aes(x = reorder(skill, total_count), y = total_count/hs_sr_denom)) +
   geom_col(fill = 'grey60') +
   coord_flip() +
@@ -452,9 +534,19 @@ sci_industry <- filter(df_all, scientist == 1 & Company_Industry != '') %>%
   dplyr::group_by(Company_Industry) %>%
   dplyr::summarize(postings = n()) %>%
   arrange(desc(postings))
+```
+
+* About 4 out of 5 senior data scientist roles seek out python users.
+* Over half of senior data scientist roles seek out the top 4 skills.
 
 
-# Top Company Industries Seeking Data Scientists
+### Companies
+
+#### Top Company Industries Seeking Data Scientists
+
+Lets take a look at which companies are posting in search of data scientists.
+
+```{r}
 ggplot(sci_industry[1:10,], aes(x = reorder(Company_Industry, postings), y = postings / sum(sci_industry$postings))) +
   geom_col(fill = 'grey60') +
   coord_flip() +
@@ -465,7 +557,12 @@ ggplot(sci_industry[1:10,], aes(x = reorder(Company_Industry, postings), y = pos
   scale_y_continuous(label = percent_format(accuracy = 1))
 ```
 
-#### Word Cloud
+* Data science is essentialy a business service!
+* Internet and software companies have heaps of data.
+* Banks and Financial Institutions have a lot to gain with incremental improvements.
+
+
+### Word Cloud
 ```{r}
 # WordCLoud map for the soft and hard skillset that high rating/star companies are 
 # looking for in engineer vs analyst/scientist Position: 
@@ -509,6 +606,8 @@ kable(df.stars.5.Salary)
 #     160,000 USD
 ```
 
+### Jobs by State
+
 ```{r, warning = FALSE}
 #Statewise Job posting for Data Science Jobs: 
 df.states <- df_all %>% 
@@ -533,8 +632,11 @@ p
 
 ```
 
-### The Question on Everybody's Mind: What Technical Skills will Get Me a High Paying Job?
-#### First, we need to select and arrange the data we want to use
+### A Look at Salary
+
+#### The Question on Everybody's Mind: What Technical Skills will Get Me a High Paying Job?
+
+First, we need to select and arrange the data we want to use
 
 ```{r}
 #Creates a hard-skill and salary, and job type dataset
@@ -580,6 +682,8 @@ for (i in Pay_Grades) {
 
 ```
 
+### A Look at Signficance
+
 #### Statistical analysis using chi-squared to filter to only significant findings
 ```{r}
 #Specify the significance level
@@ -621,9 +725,9 @@ while (j < nrow(PayTable)) {
 }
 ```
 
-#### Proportion plots for skills vs salary
+### Proportion Plots for Skills vs Salary
 
-##### The plots below show the proportions of posts that mention a skill for each salary range.  The horizontal bar would be the expected proportion if there was no difference in the proportion of mentions according to the salary range.  The plots shown are only those for which there were over 200 skill mentions p > 0.05 (as determined by chi squared tests).  There are several interesting findings below, and if one is interested in knowing which skills seem to correlate with the highest paying jobs: C/C++, Hadoop, Hive, Java, NLP, Scala, Spark, and TensorFlow.
+The plots below show the proportions of posts that mention a skill for each salary range.  The horizontal bar would be the expected proportion if there was no difference in the proportion of mentions according to the salary range.  The plots shown are only those for which there were over 200 skill mentions p > 0.05 (as determined by chi squared tests).  There are several interesting findings below, and if one is interested in knowing which skills seem to correlate with the highest paying jobs: C/C++, Hadoop, Hive, Java, NLP, Scala, Spark, and TensorFlow.
 
 ```{r}
 i = 0
@@ -648,9 +752,13 @@ while (i < length(SigSkills)) {
 
 ```
 
-### Create a connection Object to MySQL database.
-#### We will connect to the sample database named "indeed"  created on local host
-#### Pls create the database manually on your local MySQL installation with details as in the connection string below
+## Database Design
+
+Lets create a connection Object to MySQL database.
+
+We will connect to the sample database named "indeed"  created on local host.
+
+Pls create the database manually on your local MySQL installation with details as in the connection string below.
 
 ```{r}
 #install.packages("RMySQL")
